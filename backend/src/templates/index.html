@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NodeFlow Camera</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        #preview {
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+        }
+        .controls {
+            margin: 20px 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        button {
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            background: #2c2c2c;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button.active {
+            background: #4CAF50;
+        }
+        button.stop {
+            background: #f44336;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            background: #2c2c2c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <video id="preview" autoplay playsinline muted></video>
+        <div class="controls">
+            <button id="startVideo">Start Camera</button>
+            <button id="stopVideo" class="stop">Stop Camera</button>
+            <button id="startAudio">Start Mic</button>
+            <button id="stopAudio" class="stop">Stop Mic</button>
+        </div>
+        <div id="status" class="status">Not connected</div>
+    </div>
+
+    <script>
+        let socket;
+        let videoStream = null;
+        let audioStream = null;
+        let videoSender = null;
+        let audioSender = null;
+
+        // Error handler function
+        function handleError(error) {
+            console.error('Error:', error);
+            document.getElementById('status').textContent = `Error: ${error.message}`;
+            alert(`Error accessing media devices: ${error.message}`);
+        }
+        
+        // Configuration
+        const config = {
+            video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                frameRate: { ideal: 20 }
+            },
+            audio: {
+                channelCount: 1,
+                sampleRate: 44100
+            }
+        };
+
+        // Debug media device support
+        console.log('Checking media device support...');
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            console.log('✓ getUserMedia is supported');
+            navigator.mediaDevices.enumerateDevices()
+                .then(devices => {
+                    const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                    const audioDevices = devices.filter(d => d.kind === 'audioinput');
+                    console.log(`Available devices: ${videoDevices.length} video, ${audioDevices.length} audio`);
+                })
+                .catch(err => console.error('Error enumerating devices:', err));
+        } else {
+            console.error('✕ getUserMedia is NOT supported');
+        }
+
+        // Initialize mediaDevices API for older browsers
+        if (navigator.mediaDevices === undefined) {
+            console.warn('mediaDevices undefined, trying fallback...');
+            navigator.mediaDevices = {};
+        }
+
+        // Handle legacy browsers
+        if (navigator.mediaDevices.getUserMedia === undefined) {
+            console.warn('getUserMedia undefined, trying fallback...');
+            navigator.mediaDevices.getUserMedia = function(constraints) {
+                const getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                if (!getUserMedia) {
+                    const error = new Error('getUserMedia is not implemented in this browser');
+                    console.error(error);
+                    return Promise.reject(error);
+                }
+                return new Promise((resolve, reject) => {
+                    getUserMedia.call(navigator, constraints, resolve, reject);
+                });
+            }
+        }
+
+        // Connect WebSocket
+        function connect() {
+            try {
+                // Get the current protocol and hostname
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const hostname = window.location.hostname || 'localhost';
+                const port = window.location.port || '5000';
+                const wsUrl = `${protocol}//${hostname}:${port}/ws`;
+                
+                console.log('WebSocket Debug Info:');
+                console.log('- Protocol:', protocol);
+                console.log('- Location:', window.location.href);
+                console.log('- WS URL:', wsUrl);
+                console.log('- Secure Context:', window.isSecureContext);
+                console.log('- SSL Certificate:', document.location.protocol);
+                
+                console.log('Attempting WebSocket connection to:', wsUrl);
+                document.getElementById('status').textContent = 'Connecting...';
+                
+                // Close existing socket if any
+                if (socket) {
+                    socket.close();
+                }
+                
+                socket = new WebSocket(wsUrl);
+                
+                socket.onopen = () => {
+                    console.log('WebSocket connection established');
+                    document.getElementById('status').textContent = 'Connected';
+                    document.getElementById('status').style.backgroundColor = '#4CAF50';
+                    
+                    // Send initial message to server
+                    socket.send(JSON.stringify({
+                        type: 'hello',
+                        message: 'Client connected'
+                    }));
+                };
+                
+                socket.onclose = (event) => {
+                    console.log('WebSocket connection closed:', event.code, event.reason);
+                    document.getElementById('status').textContent = `Disconnected (${event.code})`;
+                    document.getElementById('status').style.backgroundColor = '#f44336';
+                    
+                    // Try to reconnect after 3 seconds
+                    setTimeout(connect, 3000);
+                };
+                
+                socket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    document.getElementById('status').textContent = 'Connection error';
+                    document.getElementById('status').style.backgroundColor = '#f44336';
+                };
+
+                socket.onmessage = (event) => {
+                    console.log('Received message:', event.data);
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'connection' && data.status === 'connected') {
+                            document.getElementById('status').textContent = 'Connected and ready';
+                            document.getElementById('status').style.backgroundColor = '#4CAF50';
+                        }
+                    } catch (e) {
+                        console.error('Error parsing message:', e);
+                    }
+                };
+            } catch (error) {
+                console.error('Error creating WebSocket:', error);
+                document.getElementById('status').textContent = 'Failed to create connection';
+                document.getElementById('status').style.backgroundColor = '#f44336';
+            }
+        }
+
+        // Check if running in secure context
+        if (!window.isSecureContext) {
+            alert('This application requires a secure context (HTTPS or localhost). Please use HTTPS.');
+            return;
+        }
+
+        // Initialize connection when page loads
+        window.addEventListener('load', () => {
+            console.log('Page loaded, initializing WebSocket connection...');
+            connect();
+        });
+
+        // Start video streaming
+        async function startVideo() {
+            try {
+                console.log('Starting video stream...');
+                
+                // Check if we're in a secure context
+                if (!window.isSecureContext) {
+                    throw new Error('Media devices require a secure context (HTTPS)');
+                }
+
+                // Check media devices support
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('Media devices API not supported');
+                }
+
+                // Check camera permissions
+                try {
+                    const permissions = await navigator.permissions.query({ name: 'camera' });
+                    console.log('Camera permission status:', permissions.state);
+                } catch (permError) {
+                    console.warn('Permissions API not supported, continuing anyway:', permError);
+                }
+                
+                // Request camera access
+                console.log('Requesting camera access...');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: {
+                        ...config.video,
+                        facingMode: { ideal: 'environment' } // Prefer back camera
+                    }
+                });
+                
+                console.log('Camera access granted:', stream.getVideoTracks()[0].label);
+                videoStream = stream;
+                const videoElement = document.getElementById('preview');
+                videoElement.srcObject = stream;
+                
+                // Create video sender
+                const videoTrack = stream.getVideoTracks()[0];
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const video = document.getElementById('preview');
+                
+                canvas.width = config.video.width.ideal;
+                canvas.height = config.video.height.ideal;
+                
+                videoSender = setInterval(() => {
+                    if (socket.readyState === WebSocket.OPEN && videoTrack.enabled) {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        canvas.toBlob(
+                            (blob) => {
+                                socket.send(JSON.stringify({
+                                    type: 'video',
+                                    data: blob
+                                }));
+                            },
+                            'image/jpeg',
+                            0.6  // JPEG quality
+                        );
+                    }
+                }, 1000 / config.video.frameRate.ideal);
+                
+                document.getElementById('startVideo').classList.add('active');
+                
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                document.getElementById('status').textContent = 'Camera error: ' + error.message;
+            }
+        }
+
+        // Start audio streaming
+        async function startAudio() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: config.audio });
+                audioStream = stream;
+                
+                // Create audio sender
+                const audioContext = new AudioContext();
+                const source = audioContext.createMediaStreamSource(stream);
+                const processor = audioContext.createScriptProcessor(config.audio.bufferSize, 1, 1);
+                
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+                
+                processor.onaudioprocess = (e) => {
+                    if (socket.readyState === WebSocket.OPEN) {
+                        const audioData = e.inputBuffer.getChannelData(0);
+                        socket.send(JSON.stringify({
+                            type: 'audio',
+                            data: Array.from(audioData)
+                        }));
+                    }
+                };
+                
+                audioSender = processor;
+                document.getElementById('startAudio').classList.add('active');
+                
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+                document.getElementById('status').textContent = 'Microphone error: ' + error.message;
+            }
+        }
+
+        // Stop video streaming
+        function stopVideo() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            if (videoSender) {
+                clearInterval(videoSender);
+                videoSender = null;
+            }
+            document.getElementById('preview').srcObject = null;
+            document.getElementById('startVideo').classList.remove('active');
+        }
+
+        // Stop audio streaming
+        function stopAudio() {
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+                audioStream = null;
+            }
+            if (audioSender) {
+                audioSender.disconnect();
+                audioSender = null;
+            }
+            document.getElementById('startAudio').classList.remove('active');
+        }
+
+        // Event listeners
+        document.getElementById('startVideo').onclick = startVideo;
+        document.getElementById('stopVideo').onclick = stopVideo;
+        document.getElementById('startAudio').onclick = startAudio;
+        document.getElementById('stopAudio').onclick = stopAudio;
+
+        // Start connection
+        connect();
+
+        // Handle page unload
+        window.onbeforeunload = () => {
+            stopVideo();
+            stopAudio();
+            if (socket) {
+                socket.close();
+            }
+        };
+    </script>
+</body>
+</html>

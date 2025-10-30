@@ -1,0 +1,5 @@
+-r requirements-base.txt
+playsound3
+wavio==0.0.7
+pyinstaller==6.1.0
+python-vlc  # Alternative audio player for Linux

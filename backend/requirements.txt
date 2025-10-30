@@ -1,0 +1,30 @@
+# Server dependencies
+aiohttp>=3.8.0
+cryptography>=3.4.7
+python-multipart>=0.0.5
+PyYAML>=5.4.1
+websockets>=10.0
+
+# GUI and imaging
+Pillow>=10.0.0
+opencv-python>=4.8.0
+customtkinter>=5.2.0
+ttkthemes>=3.2.2
+
+# Audio handling
+PyAudio>=0.2.13
+wavio>=0.0.7
+
+# Using simple audio libraries instead of sounddevice/numpy for reliability
+
+# Security and configuration
+cryptography==41.0.4
+python-dotenv==1.0.0
+
+# Development and testing
+pytest==7.4.2
+packaging==23.1
+pyinstaller==6.1.0
+
+# Display management
+screeninfo==0.8.1

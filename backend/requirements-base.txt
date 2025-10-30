@@ -1,0 +1,19 @@
+# Core GUI and imaging
+customtkinter==5.2.0
+Pillow==9.5.0
+ttkthemes==3.2.2
+
+# Hardware access and processing
+opencv-python==4.8.0.74
+numpy==1.24.3  # Required for OpenCV
+
+# Security and configuration
+cryptography==41.0.4
+python-dotenv==1.0.0
+
+# Development and testing
+pytest==7.4.2
+packaging==23.1
+
+# Display management
+screeninfo==0.8.1

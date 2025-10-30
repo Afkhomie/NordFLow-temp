@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stream Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #log { 
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        #localVideo {
+            max-width: 100%;
+            margin-top: 20px;
+            border: 1px solid #ccc;
+        }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Stream Status: <span id="status">Connecting...</span></h1>
+    <button id="startBtn">Start Streaming</button>
+    <div id="log"></div>
+    <video id="localVideo" autoplay playsinline muted></video>
+
+    <script>
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+        const startBtn = document.getElementById('startBtn');
+        
+        function addLog(msg) {
+            console.log(msg);
+            log.innerHTML += `<p>${new Date().toISOString()}: ${msg}</p>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        addLog('Page loaded');
+        addLog(`Location: ${window.location.href}`);
+        addLog(`Secure context: ${window.isSecureContext}`);
+
+        // Check WebSocket support
+        if ('WebSocket' in window) {
+            addLog('✓ WebSocket supported');
+        } else {
+            addLog('✗ WebSocket NOT supported');
+        }
+
+        // Check media devices support
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            addLog('✓ getUserMedia supported');
+        } else {
+            addLog('✗ getUserMedia NOT supported');
+        }
+
+        startBtn.addEventListener('click', async () => {
+            addLog('Start button clicked');
+            
+            try {
+                // Test WebSocket connection
+                addLog('Attempting WebSocket connection...');
+                const wsUrl = `wss://${window.location.host}/ws`;
+                addLog(`WebSocket URL: ${wsUrl}`);
+                
+                const ws = new WebSocket(wsUrl);
+                
+                ws.onopen = () => {
+                    addLog('✓ WebSocket CONNECTED!');
+                    status.textContent = 'Connected';
+                    status.style.color = 'green';
+                };
+                
+                ws.onerror = (error) => {
+                    addLog(`✗ WebSocket ERROR: ${JSON.stringify(error)}`);
+                    status.textContent = 'Error';
+                    status.style.color = 'red';
+                };
+                
+                ws.onclose = (event) => {
+                    addLog(`WebSocket closed: code=${event.code}, reason=${event.reason}`);
+                    status.textContent = 'Disconnected';
+                };
+
+                // Test media access
+                addLog('Requesting camera/microphone access...');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' }, 
+                    audio: true 
+                });
+                addLog('✓ Got media stream!');
+                document.getElementById('localVideo').srcObject = stream;
+                
+            } catch (error) {
+                addLog(`✗ ERROR: ${error.name} - ${error.message}`);
+                status.textContent = 'Failed';
+                status.style.color = 'red';
+            }
+        });
+    </script>
+</body>
+</html>
+
+                const ws = new WebSocket(wsUrl);
+                
+                ws.onopen = () => {
+                    log('WebSocket connection successful!');
+                    setStatus('WebSocket Connected', 'success');
+                    ws.send(JSON.stringify({type: 'test', message: 'Hello from client!'}));
+                };
+                
+                ws.onclose = (event) => {
+                    log(`WebSocket closed: ${event.code} - ${event.reason}`);
+                    setStatus('WebSocket Closed', 'error');
+                };
+                
+                ws.onerror = (error) => {
+                    log(`WebSocket error: ${error}`);
+                    setStatus('WebSocket Error', 'error');
+                };
+
+                ws.onmessage = (event) => {
+                    log(`Received: ${event.data}`);
+                };
+            } catch (error) {
+                log(`Error: ${error.message}`);
+                setStatus('Connection Error', 'error');
+            }
+        };
+
+        // Test media access
+        document.getElementById('testMedia').onclick = async () => {
+            try {
+                log('Testing media access...');
+                
+                if (!navigator.mediaDevices) {
+                    throw new Error('mediaDevices API not available');
+                }
+                
+                log('Checking available devices...');
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const cameras = devices.filter(d => d.kind === 'videoinput');
+                const mics = devices.filter(d => d.kind === 'audioinput');
+                log(`Found ${cameras.length} cameras and ${mics.length} microphones`);
+                
+                log('Requesting camera access...');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' }, 
+                    audio: true 
+                });
+                log('Media access granted!');
+                setStatus('Media Access OK', 'success');
+                
+                // Clean up
+                stream.getTracks().forEach(track => track.stop());
+                
+            } catch (error) {
+                log(`Media Error: ${error.message}`);
+                setStatus('Media Access Error', 'error');
+            }
+        };
+
+        // Check secure context
+        if (!window.isSecureContext) {
+            setStatus('Not Secure - HTTPS Required', 'warning');
+        }
+
+        // Initial status
+        log('Page loaded');
+        log(`Protocol: ${window.location.protocol}`);
+        log(`Host: ${window.location.host}`);
+        log(`Secure Context: ${window.isSecureContext}`);
+    </script>
+</body>
+</html>
