@@ -71,7 +71,4 @@ jobs:
           release/NodeFlow-Source-v1.0.0.zip
         generate_release_notes: true
       env:
-<<<<<<< HEAD
-      
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
->>>>>>> f567e39 (Update project files with latest changes)
