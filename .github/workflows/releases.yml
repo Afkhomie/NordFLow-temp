@@ -35,9 +35,16 @@ jobs:
       run: |
         pyinstaller NodeFlow.spec --clean
         
+    - name: Verify executable exists
+      run: |
+        if (!(Test-Path dist/NodeFlow.exe)) { 
+          Write-Error "dist/NodeFlow.exe not found. Build failed." 
+          exit 1 
+        }
+        
     - name: Create release packages
       run: |
-        mkdir release
+        mkdir -Force release
         Compress-Archive -Path dist/NodeFlow.exe -DestinationPath release/NodeFlow-v1.0.0-Windows.zip
         
     - name: Create source archive
@@ -58,7 +65,7 @@ jobs:
     
     steps:
     - name: Download artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: NodeFlow-Windows
         path: release
