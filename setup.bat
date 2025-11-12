@@ -1,24 +1,48 @@
 @echo off
 echo Setting up NodeFlow...
 
-REM Check if Python 3.11 is available
-py -3.11 --version >nul 2>&1
+REM Check if Python is available
+python --version >nul 2>&1
 if errorlevel 1 (
-    echo Error: Python 3.11 not found!
+    echo Error: Python not found!
+    pause
     exit /b 1
 )
 
-REM Create virtual environment
-py -3.11 -m venv venv
+REM Create virtual environment if it doesn't exist
+if not exist "venv\" (
+    echo Creating virtual environment...
+    python -m venv venv
+)
 
 REM Activate virtual environment
 call venv\Scripts\activate.bat
 
 REM Upgrade pip
+echo Upgrading pip...
 python -m pip install --upgrade pip
 
 REM Install requirements
-pip install -r requirements-windows.txt
+echo Installing dependencies...
+if exist "backend\requirements.txt" (
+    pip install -r backend\requirements.txt
+) else (
+    echo Error: backend\requirements.txt not found!
+    pause
+    exit /b 1
+)
 
-echo Setup complete! Run 'venv\Scripts\activate' to activate the environment.
+REM Install PyInstaller
+echo Installing PyInstaller...
+pip install pyinstaller
+
+echo.
+echo ========================================
+echo Setup complete!
+echo ========================================
+echo.
+echo Next steps:
+echo 1. Make sure NodeFlow.spec is in the root directory
+echo 2. Run: build.bat
+echo.
 pause
