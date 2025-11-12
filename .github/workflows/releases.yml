@@ -45,7 +45,7 @@ jobs:
         git archive --format=zip --output=release/NodeFlow-Source-v1.0.0.zip HEAD
         
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: NodeFlow-Windows
         path: |
