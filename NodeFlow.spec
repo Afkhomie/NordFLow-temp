@@ -1,48 +1,24 @@
-﻿# -*- mode: python ; coding: utf-8 -*-
+# -*- mode: python ; coding: utf-8 -*-
 
-block_cipher = None
 
 a = Analysis(
-    ['backend/src/gui.py'],
+    ['bundle.py'],
     pathex=[],
     binaries=[],
-    datas=[
-        ('backend/src/templates', 'templates'),
-        ('backend/src/server.crt', '.'),
-        ('backend/src/server.key', '.'),
-    ],
-    hiddenimports=[
-        'customtkinter',
-        'PIL._tkinter_finder',
-        'aiohttp',
-        'aiohttp.web',
-        'aiohttp.web_response',
-        'aiohttp.web_request',
-        'aiohttp.web_ws',
-        'multidict',
-        'yarl',
-        'async_timeout',
-        'asyncio',
-        'OpenSSL',
-        'cryptography',
-    ],
+    datas=[('backend\\src\\templates', 'backend\\src\\templates')],
+    hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
     noarchive=False,
 )
-
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure)
 
 exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
-    a.zipfiles,
     a.datas,
     [],
     name='NodeFlow',
@@ -52,10 +28,11 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=['c:\\Users\\Prakash\\OneDrive\\Desktop\\NodeFlow\\installers\\assets\\nodeflow.ico'],
 )

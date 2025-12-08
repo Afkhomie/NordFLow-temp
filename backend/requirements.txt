@@ -1,30 +1,35 @@
-# Server dependencies
+# Core Server
 aiohttp>=3.8.0
-cryptography>=3.4.7
-python-multipart>=0.0.5
-PyYAML>=5.4.1
 websockets>=10.0
+websocket-client>=1.6.0
+cryptography>=41.0.4
 
-# GUI and imaging
-Pillow>=10.0.0
-opencv-python>=4.8.0
+# GUI - Desktop Receiver
+PyQt6>=6.5.0
+
+# GUI - Legacy
 customtkinter>=5.2.0
+Pillow>=10.0.0
 ttkthemes>=3.2.2
 
-# Audio handling
+# Video/Audio Processing
+opencv-python>=4.8.0
 PyAudio>=0.2.13
-wavio>=0.0.7
+numpy>=1.24.0
 
-# Using simple audio libraries instead of sounddevice/numpy for reliability
-
-# Security and configuration
-cryptography==41.0.4
+# Security
+pyOpenSSL>=23.0.0
 python-dotenv==1.0.0
 
-# Development and testing
-pytest==7.4.2
-packaging==23.1
-pyinstaller==6.1.0
+# Build & Packaging
+pyinstaller>=6.1.0
+sounddevice>=0.4.5
+packaging>=23.1
 
-# Display management
-screeninfo==0.8.1
+# Virtual Devices (Windows)
+pyvirtualcam>=0.4.1
+
+# OBS Automation (optional)
+obs-websocket-py>=0.2
+# Testing
+pytest==7.4.2

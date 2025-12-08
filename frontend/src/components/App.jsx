@@ -17,7 +17,8 @@ function App() {
   useEffect(() => {
     // Initialize WebSocket connection
     const connectWebSocket = () => {
-      const ws = new WebSocket('ws://localhost:8765');
+      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const ws = new WebSocket(`${protocol}://${window.location.host}/ws`);
 
       ws.onopen = () => {
         setConnected(true);

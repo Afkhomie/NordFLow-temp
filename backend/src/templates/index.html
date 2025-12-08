@@ -1,361 +1,723 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>NodeFlow Camera</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NodeFlow - Stream Your Media</title>
     <style>
-        body {
+        * {
             margin: 0;
-            padding: 20px;
-            background: #1e1e1e;
-            color: #fff;
-            font-family: Arial, sans-serif;
+            padding: 0;
+            box-sizing: border-box;
         }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+
         .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        #preview {
             width: 100%;
-            background: #000;
-            border-radius: 8px;
+            max-width: 500px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
         }
-        .controls {
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
             margin: 20px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 12px;
+            border-left: 4px solid #999;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #999;
+            animation: pulse-gray 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #4CAF50;
+            animation: pulse-green 2s infinite;
+        }
+
+        .status-dot.connecting {
+            background: #ff9800;
+            animation: pulse-orange 2s infinite;
+        }
+
+        .status-dot.error {
+            background: #f44336;
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes pulse-orange {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes pulse-gray {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.8; }
+        }
+
+        .status-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .controls-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .device-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .device-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-start {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-start:hover:not(:disabled) {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-start:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-start:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-stop {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            background: #da190b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+        }
+
+        .btn-stop:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-stop:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .info-section {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #1565c0;
+            line-height: 1.5;
+        }
+
+        .info-section strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #0d47a1;
+        }
+
+        .device-status {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-        }
-        button {
+            margin: 20px 0;
             padding: 15px;
-            border: none;
+            background: #f9f9f9;
             border-radius: 8px;
-            background: #2c2c2c;
-            color: #fff;
-            font-size: 16px;
-            cursor: pointer;
         }
-        button.active {
-            background: #4CAF50;
-        }
-        button.stop {
-            background: #f44336;
-        }
-        .status {
-            margin-top: 10px;
+
+        .device-stat {
+            text-align: center;
             padding: 10px;
-            border-radius: 4px;
-            background: #2c2c2c;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+
+        .device-stat-label {
+            font-size: 11px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .device-stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .device-stat-value.active {
+            color: #4CAF50;
+        }
+
+        .device-stat-value.inactive {
+            color: #999;
+        }
+
+        @media (max-width: 400px) {
+            .container {
+                padding: 20px 15px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            button {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+        }
+
+        /* Hide console and debug info */
+        #console,
+        .console,
+        .debug {
+            display: none !important;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <video id="preview" autoplay playsinline muted></video>
-        <div class="controls">
-            <button id="startVideo">Start Camera</button>
-            <button id="stopVideo" class="stop">Stop Camera</button>
-            <button id="startAudio">Start Mic</button>
-            <button id="stopAudio" class="stop">Stop Mic</button>
+        <div class="header">
+            <h1>NodeFlow</h1>
+            <p>Stream your media to PC</p>
         </div>
-        <div id="status" class="status">Not connected</div>
+
+        <div class="status-indicator">
+            <div class="status-dot" id="statusDot"></div>
+            <div class="status-text" id="statusText">Connecting...</div>
+        </div>
+
+        <div class="device-status">
+            <div class="device-stat">
+                <div class="device-stat-label">Camera</div>
+                <div class="device-stat-value inactive" id="cameraStat">✗</div>
+            </div>
+            <div class="device-stat">
+                <div class="device-stat-label">Microphone</div>
+                <div class="device-stat-value inactive" id="micStat">✗</div>
+            </div>
+        </div>
+
+        <div id="previewContainer" style="margin: 20px 0; display: none; text-align: center;">
+            <canvas id="previewCanvas" width="400" height="300" style="width: 100%; height: auto; border-radius: 10px; background: #000; border: 2px solid #667eea;"></canvas>
+        </div>
+
+        <div class="controls-section">
+            <div class="device-group">
+                <div class="device-label">📷 Camera</div>
+                <div class="button-group">
+                    <button id="startVideoBtn" class="btn-start">Start</button>
+                    <button id="stopVideoBtn" class="btn-stop" disabled>Stop</button>
+                </div>
+            </div>
+
+            <div class="device-group">
+                <div class="device-label">🎤 Microphone</div>
+                <div class="button-group">
+                    <button id="startAudioBtn" class="btn-start">Start</button>
+                    <button id="stopAudioBtn" class="btn-stop" disabled>Stop</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <strong>How it works:</strong>
+            Press Start to begin streaming your camera and microphone to the PC. Your video will be mirrored for a natural view.
+        </div>
     </div>
 
     <script>
+        // Suppress console.log during production
+        const productionMode = true;
+        if (productionMode) {
+            console.log = function() {};
+            console.warn = function() {};
+            console.debug = function() {};
+        }
+
         let socket;
         let videoStream = null;
         let audioStream = null;
-        let videoSender = null;
-        let audioSender = null;
+        let videoFrameInterval = null;
+        let audioFrameContext = null;
 
-        // Error handler function
-        function handleError(error) {
-            console.error('Error:', error);
-            document.getElementById('status').textContent = `Error: ${error.message}`;
-            alert(`Error accessing media devices: ${error.message}`);
-        }
+        const state = {
+            isConnected: false,
+            videoActive: false,
+            audioActive: false,
+            framesSent: 0,
+            audioFramesSent: 0
+        };
+
+        // Defer UI element access until DOM is ready
+        let ui = null;
         
-        // Configuration
+        function initUI() {
+            if (ui) return;
+            ui = {
+                statusDot: document.getElementById('statusDot'),
+                statusText: document.getElementById('statusText'),
+                cameraStat: document.getElementById('cameraStat'),
+                micStat: document.getElementById('micStat'),
+                startVideoBtn: document.getElementById('startVideoBtn'),
+                stopVideoBtn: document.getElementById('stopVideoBtn'),
+                startAudioBtn: document.getElementById('startAudioBtn'),
+                stopAudioBtn: document.getElementById('stopAudioBtn')
+            };
+        }
+
         const config = {
             video: {
-                width: { ideal: 640 },
-                height: { ideal: 480 },
-                frameRate: { ideal: 20 }
+                width: 640,
+                height: 480,
+                frameRate: 12  // Reduced for better mobile performance
             },
             audio: {
-                channelCount: 1,
-                sampleRate: 44100
+                sampleRate: 16000,
+                channelCount: 1
             }
         };
 
-        // Debug media device support
-        console.log('Checking media device support...');
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            console.log('✓ getUserMedia is supported');
-            navigator.mediaDevices.enumerateDevices()
-                .then(devices => {
-                    const videoDevices = devices.filter(d => d.kind === 'videoinput');
-                    const audioDevices = devices.filter(d => d.kind === 'audioinput');
-                    console.log(`Available devices: ${videoDevices.length} video, ${audioDevices.length} audio`);
-                })
-                .catch(err => console.error('Error enumerating devices:', err));
-        } else {
-            console.error('✕ getUserMedia is NOT supported');
-        }
+        function updateStatus(status, isConnected = null) {
+            if (!ui) initUI();
+            
+            const statuses = {
+                'connecting': { dot: 'connecting', text: 'Connecting to server...' },
+                'connected': { dot: 'connected', text: 'Connected & Ready' },
+                'disconnected': { dot: 'error', text: 'Disconnected' },
+                'error': { dot: 'error', text: 'Connection Error' },
+                'streaming': { dot: 'connected', text: 'Streaming...' }
+            };
 
-        // Initialize mediaDevices API for older browsers
-        if (navigator.mediaDevices === undefined) {
-            console.warn('mediaDevices undefined, trying fallback...');
-            navigator.mediaDevices = {};
-        }
+            const statusInfo = statuses[status] || statuses['disconnected'];
+            if (ui.statusDot) {
+                ui.statusDot.className = `status-dot ${statusInfo.dot}`;
+            }
+            if (ui.statusText) {
+                ui.statusText.textContent = statusInfo.text;
+            }
 
-        // Handle legacy browsers
-        if (navigator.mediaDevices.getUserMedia === undefined) {
-            console.warn('getUserMedia undefined, trying fallback...');
-            navigator.mediaDevices.getUserMedia = function(constraints) {
-                const getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-                if (!getUserMedia) {
-                    const error = new Error('getUserMedia is not implemented in this browser');
-                    console.error(error);
-                    return Promise.reject(error);
-                }
-                return new Promise((resolve, reject) => {
-                    getUserMedia.call(navigator, constraints, resolve, reject);
-                });
+            if (isConnected !== null) {
+                state.isConnected = isConnected;
             }
         }
 
-        // Connect WebSocket
-        function connect() {
-            try {
-                // Get the current protocol and hostname
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const hostname = window.location.hostname || 'localhost';
-                const port = window.location.port || '5000';
-                const wsUrl = `${protocol}//${hostname}:${port}/ws`;
-                
-                console.log('WebSocket Debug Info:');
-                console.log('- Protocol:', protocol);
-                console.log('- Location:', window.location.href);
-                console.log('- WS URL:', wsUrl);
-                console.log('- Secure Context:', window.isSecureContext);
-                console.log('- SSL Certificate:', document.location.protocol);
-                
-                console.log('Attempting WebSocket connection to:', wsUrl);
-                document.getElementById('status').textContent = 'Connecting...';
-                
-                // Close existing socket if any
-                if (socket) {
-                    socket.close();
-                }
-                
-                socket = new WebSocket(wsUrl);
-                
-                socket.onopen = () => {
-                    console.log('WebSocket connection established');
-                    document.getElementById('status').textContent = 'Connected';
-                    document.getElementById('status').style.backgroundColor = '#4CAF50';
-                    
-                    // Send initial message to server
-                    socket.send(JSON.stringify({
-                        type: 'hello',
-                        message: 'Client connected'
-                    }));
-                };
-                
-                socket.onclose = (event) => {
-                    console.log('WebSocket connection closed:', event.code, event.reason);
-                    document.getElementById('status').textContent = `Disconnected (${event.code})`;
-                    document.getElementById('status').style.backgroundColor = '#f44336';
-                    
-                    // Try to reconnect after 3 seconds
-                    setTimeout(connect, 3000);
-                };
-                
-                socket.onerror = (error) => {
-                    console.error('WebSocket error:', error);
-                    document.getElementById('status').textContent = 'Connection error';
-                    document.getElementById('status').style.backgroundColor = '#f44336';
-                };
+        function updateDeviceStatus() {
+            if (!ui) initUI();
+            
+            if (ui.cameraStat) {
+                ui.cameraStat.textContent = state.videoActive ? '✓' : '✗';
+                ui.cameraStat.className = `device-stat-value ${state.videoActive ? 'active' : 'inactive'}`;
+            }
 
-                socket.onmessage = (event) => {
-                    console.log('Received message:', event.data);
-                    try {
-                        const data = JSON.parse(event.data);
-                        if (data.type === 'connection' && data.status === 'connected') {
-                            document.getElementById('status').textContent = 'Connected and ready';
-                            document.getElementById('status').style.backgroundColor = '#4CAF50';
-                        }
-                    } catch (e) {
-                        console.error('Error parsing message:', e);
-                    }
-                };
-            } catch (error) {
-                console.error('Error creating WebSocket:', error);
-                document.getElementById('status').textContent = 'Failed to create connection';
-                document.getElementById('status').style.backgroundColor = '#f44336';
+            if (ui.micStat) {
+                ui.micStat.textContent = state.audioActive ? '✓' : '✗';
+                ui.micStat.className = `device-stat-value ${state.audioActive ? 'active' : 'inactive'}`;
+            }
+
+            if (ui.stopVideoBtn) ui.stopVideoBtn.disabled = !state.videoActive;
+            if (ui.startVideoBtn) ui.startVideoBtn.disabled = state.videoActive;
+            if (ui.stopAudioBtn) ui.stopAudioBtn.disabled = !state.audioActive;
+            if (ui.startAudioBtn) ui.startAudioBtn.disabled = state.audioActive;
+
+            if (state.videoActive || state.audioActive) {
+                updateStatus('streaming');
+            } else if (state.isConnected) {
+                updateStatus('connected');
             }
         }
 
-        // Check if running in secure context
-        if (!window.isSecureContext) {
-            alert('This application requires a secure context (HTTPS or localhost). Please use HTTPS.');
-            return;
-        }
-
-        // Initialize connection when page loads
-        window.addEventListener('load', () => {
-            console.log('Page loaded, initializing WebSocket connection...');
-            connect();
-        });
-
-        // Start video streaming
         async function startVideo() {
             try {
-                console.log('Starting video stream...');
-                
-                // Check if we're in a secure context
-                if (!window.isSecureContext) {
-                    throw new Error('Media devices require a secure context (HTTPS)');
+                if (!state.isConnected) {
+                    alert('Not connected to server yet. Please wait...');
+                    return;
                 }
 
-                // Check media devices support
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    throw new Error('Media devices API not supported');
+                if (state.videoActive) {
+                    return;
                 }
 
-                // Check camera permissions
-                try {
-                    const permissions = await navigator.permissions.query({ name: 'camera' });
-                    console.log('Camera permission status:', permissions.state);
-                } catch (permError) {
-                    console.warn('Permissions API not supported, continuing anyway:', permError);
-                }
-                
-                // Request camera access
-                console.log('Requesting camera access...');
-                const stream = await navigator.mediaDevices.getUserMedia({ 
+                const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        ...config.video,
-                        facingMode: { ideal: 'environment' } // Prefer back camera
-                    }
+                        width: { ideal: config.video.width },
+                        height: { ideal: config.video.height },
+                        facingMode: { ideal: 'user' }
+                    },
+                    audio: false
                 });
-                
-                console.log('Camera access granted:', stream.getVideoTracks()[0].label);
+
                 videoStream = stream;
-                const videoElement = document.getElementById('preview');
-                videoElement.srcObject = stream;
-                
-                // Create video sender
+                state.videoActive = true;
+                updateDeviceStatus();
+
+                // Show preview container
+                const previewContainer = document.getElementById('previewContainer');
+                const previewCanvas = document.getElementById('previewCanvas');
+                if (previewContainer) previewContainer.style.display = 'block';
+
                 const videoTrack = stream.getVideoTracks()[0];
                 const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const video = document.getElementById('preview');
-                
-                canvas.width = config.video.width.ideal;
-                canvas.height = config.video.height.ideal;
-                
-                videoSender = setInterval(() => {
-                    if (socket.readyState === WebSocket.OPEN && videoTrack.enabled) {
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        canvas.toBlob(
-                            (blob) => {
-                                socket.send(JSON.stringify({
-                                    type: 'video',
-                                    data: blob
-                                }));
-                            },
-                            'image/jpeg',
-                            0.6  // JPEG quality
-                        );
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                const previewCtx = previewCanvas ? previewCanvas.getContext('2d', { willReadFrequently: true }) : null;
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.muted = true;
+                video.play().catch(e => console.error('Video play error:', e));
+
+                canvas.width = config.video.width;
+                canvas.height = config.video.height;
+
+                videoFrameInterval = setInterval(() => {
+                    if (socket && socket.readyState === WebSocket.OPEN && videoTrack && videoTrack.enabled) {
+                        try {
+                            ctx.save();
+                            // Mirror the video (flip horizontally)
+                            ctx.scale(-1, 1);
+                            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+                            ctx.restore();
+
+                            // Also draw to preview canvas (mirrored)
+                            if (previewCtx) {
+                                previewCtx.save();
+                                previewCtx.scale(-1, 1);
+                                previewCtx.drawImage(video, -previewCanvas.width, 0, previewCanvas.width, previewCanvas.height);
+                                previewCtx.restore();
+                            }
+
+                            canvas.toBlob((blob) => {
+                                if (blob && socket && socket.readyState === WebSocket.OPEN) {
+                                    const reader = new FileReader();
+                                    reader.onload = () => {
+                                        try {
+                                            const base64 = reader.result.split(',')[1];
+                                            socket.send(JSON.stringify({
+                                                type: 'video',
+                                                data: base64,
+                                                timestamp: Date.now()
+                                            }));
+                                            state.framesSent++;
+                                        } catch (e) {
+                                            // Send failed silently
+                                        }
+                                    };
+                                    reader.readAsDataURL(blob);
+                                }
+                            }, 'image/jpeg', 0.6);
+                        } catch (e) {
+                            // Frame capture error, continue
+                        }
                     }
-                }, 1000 / config.video.frameRate.ideal);
-                
-                document.getElementById('startVideo').classList.add('active');
-                
+                }, 1000 / config.video.frameRate);
+
             } catch (error) {
-                console.error('Error accessing camera:', error);
-                document.getElementById('status').textContent = 'Camera error: ' + error.message;
+                alert(`Camera Error: ${error.message}`);
+                state.videoActive = false;
+                updateDeviceStatus();
+                stopVideo();
             }
         }
 
-        // Start audio streaming
         async function startAudio() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: config.audio });
+                if (!state.isConnected) {
+                    alert('Not connected to server yet. Please wait...');
+                    return;
+                }
+
+                if (state.audioActive) {
+                    return;
+                }
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    },
+                    video: false
+                });
+
                 audioStream = stream;
-                
-                // Create audio sender
-                const audioContext = new AudioContext();
-                const source = audioContext.createMediaStreamSource(stream);
-                const processor = audioContext.createScriptProcessor(config.audio.bufferSize, 1, 1);
-                
-                source.connect(processor);
-                processor.connect(audioContext.destination);
-                
-                processor.onaudioprocess = (e) => {
-                    if (socket.readyState === WebSocket.OPEN) {
-                        const audioData = e.inputBuffer.getChannelData(0);
-                        socket.send(JSON.stringify({
-                            type: 'audio',
-                            data: Array.from(audioData)
-                        }));
-                    }
-                };
-                
-                audioSender = processor;
-                document.getElementById('startAudio').classList.add('active');
-                
+                state.audioActive = true;
+                updateDeviceStatus();
+
+                try {
+                    // Use native browser sample rate to avoid AudioContext mismatch errors
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const nativeSampleRate = audioContext.sampleRate || 16000;
+                    const source = audioContext.createMediaStreamSource(stream);
+                    const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+                    source.connect(processor);
+                    processor.connect(audioContext.destination);
+
+                    processor.onaudioprocess = (e) => {
+                        if (socket && socket.readyState === WebSocket.OPEN) {
+                            try {
+                                const audioData = e.inputBuffer.getChannelData(0);
+                                // Send only sample data, not full array
+                                socket.send(JSON.stringify({
+                                    type: 'audio',
+                                    sampleRate: nativeSampleRate,
+                                    channelCount: 1,
+                                    data: Array.from(audioData),
+                                    timestamp: Date.now()
+                                }));
+                                state.audioFramesSent++;
+                            } catch (e) {
+                                // Send failed silently
+                            }
+                        }
+                    };
+
+                    audioFrameContext = { processor, audioContext, source, stream };
+                } catch (e) {
+                    alert(`Audio Context Error: ${e.message}`);
+                    stopAudio();
+                }
+
             } catch (error) {
-                console.error('Error accessing microphone:', error);
-                document.getElementById('status').textContent = 'Microphone error: ' + error.message;
+                alert(`Microphone Error: ${error.message}`);
+                state.audioActive = false;
+                updateDeviceStatus();
+                stopAudio();
             }
         }
 
-        // Stop video streaming
         function stopVideo() {
             if (videoStream) {
                 videoStream.getTracks().forEach(track => track.stop());
                 videoStream = null;
             }
-            if (videoSender) {
-                clearInterval(videoSender);
-                videoSender = null;
+            if (videoFrameInterval) {
+                clearInterval(videoFrameInterval);
+                videoFrameInterval = null;
             }
-            document.getElementById('preview').srcObject = null;
-            document.getElementById('startVideo').classList.remove('active');
+            state.videoActive = false;
+            updateDeviceStatus();
+            // Hide preview container
+            const previewContainer = document.getElementById('previewContainer');
+            if (previewContainer) previewContainer.style.display = 'none';
         }
 
-        // Stop audio streaming
         function stopAudio() {
             if (audioStream) {
                 audioStream.getTracks().forEach(track => track.stop());
                 audioStream = null;
             }
-            if (audioSender) {
-                audioSender.disconnect();
-                audioSender = null;
+            if (audioFrameContext) {
+                try {
+                    audioFrameContext.processor.disconnect();
+                    audioFrameContext.source.disconnect();
+                    audioFrameContext.audioContext.close();
+                } catch (e) {
+                    // Cleanup error, ignore
+                }
+                audioFrameContext = null;
             }
-            document.getElementById('startAudio').classList.remove('active');
+            state.audioActive = false;
+            updateDeviceStatus();
         }
 
-        // Event listeners
-        document.getElementById('startVideo').onclick = startVideo;
-        document.getElementById('stopVideo').onclick = stopVideo;
-        document.getElementById('startAudio').onclick = startAudio;
-        document.getElementById('stopAudio').onclick = stopAudio;
+        function connect() {
+            if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
+                return; // Already connecting/connected
+            }
 
-        // Start connection
-        connect();
+            updateStatus('connecting');
 
-        // Handle page unload
-        window.onbeforeunload = () => {
+            try {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+                socket = new WebSocket(wsUrl);
+
+                socket.onopen = () => {
+                    state.isConnected = true;
+                    updateStatus('connected');
+                    try {
+                        socket.send(JSON.stringify({
+                            type: 'hello',
+                            client: 'mobile-streamer',
+                            version: '1.0'
+                        }));
+                    } catch (e) {
+                        // Send failed
+                    }
+                };
+
+                socket.onclose = () => {
+                    state.isConnected = false;
+                    state.videoActive = false;
+                    state.audioActive = false;
+                    stopVideo();
+                    stopAudio();
+                    updateDeviceStatus();
+                    updateStatus('disconnected');
+                    setTimeout(connect, 3000); // Reconnect after 3 seconds
+                };
+
+                socket.onerror = (error) => {
+                    updateStatus('error');
+                };
+
+                socket.onmessage = (event) => {
+                    try {
+                        const msg = JSON.parse(event.data);
+                        if (msg.type === 'connection') {
+                            state.isConnected = true;
+                            updateStatus('connected');
+                        } else if (msg.type === 'ack') {
+                            // Server acknowledged frame
+                        }
+                    } catch (e) {
+                        // Ignore non-JSON messages
+                    }
+                };
+
+            } catch (error) {
+                updateStatus('error');
+                setTimeout(connect, 3000);
+            }
+        }
+
+        // Wait for DOM to be fully ready
+        function initApp() {
+            initUI();
+            
+            // Setup event listeners
+            if (ui.startVideoBtn) ui.startVideoBtn.addEventListener('click', startVideo);
+            if (ui.stopVideoBtn) ui.stopVideoBtn.addEventListener('click', stopVideo);
+            if (ui.startAudioBtn) ui.startAudioBtn.addEventListener('click', startAudio);
+            if (ui.stopAudioBtn) ui.stopAudioBtn.addEventListener('click', stopAudio);
+
+            // Connect to server
+            connect();
+
+            // Update device status periodically
+            setInterval(updateDeviceStatus, 100);
+        }
+
+        // Initialize when page is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+
+        // Cleanup on unload
+        window.addEventListener('beforeunload', () => {
             stopVideo();
             stopAudio();
             if (socket) {
-                socket.close();
+                try {
+                    socket.close();
+                } catch (e) {
+                    // Close error, ignore
+                }
             }
-        };
+        });
+
+        // Cleanup on page hide (mobile background)
+        window.addEventListener('pagehide', () => {
+            stopVideo();
+            stopAudio();
+        });
     </script>
 </body>
 </html>
